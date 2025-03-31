@@ -48,7 +48,7 @@ $$\psi(x_j,t+\Delta t/2)=\psi(x_j,t)\cdot\exp\left(i\frac{\Delta t}{2}\left(-\fr
 
 5. **方便求解的边界条件：**
 由于动能项需要使用傅里叶变换，边界条件通常取周期边界条件，使
-得波函数的值在两端点处连续：
+得波函数的值在两端点处相等：
 
 $$\psi(x_{\min},t)=\psi(x_{\max},t).$$
 
@@ -97,17 +97,54 @@ def calculate_phi_and_density(x:np.ndarray,t0:float,tf:float,dt:float,phi_0:np.n
 画出$\rho$的热力图如下：
 ![alt text](figure/density_evolution_with_x_from_-3.0_to_2.98828125.png)
 
+由上图可以发现：
+1. 波函数主要集中在x=0处
+2. 随着时间的演化，波函数呈现出周期性的波包，波包周期性的变大变小，宽度随时间周期性变化
+
 ## 3. 波包宽度的演化情况
 画出同样时间内，波包宽度的演化情况。波包宽度定义为 $w(t) \equiv (x^2)(t)$。你发现了什么？（1分）
 ![alt text](figure/wave_packet_width_evolution_2252.png)
 
+由上图可以发现：
+1. 该系统是周期性的系统
+2. $x^2$的期望值呈现出周期性的变大变小，说明波包在进行类似简谐振子的运动
+3. 波包$x^2$的期望值振荡的幅值保持不变，说明这是一个较为稳定的系统
 
 
 ## 4. 定性解释
 结合GP方程的物理意义，定性解释上述现象。（1分）
+1. **波包围绕 $x=0$ 振荡**
+
+   由于外加势 $V(x) = \frac{1}{2}x^2$ 是谐振子势，波包受到一个回弹力，使得它在势阱内振荡，就像一个受限在势阱中的粒子。
+
+   这导致波函数的密度分布 $\rho(x,t) = |\psi(x,t)|^2$ 在 $x=0$ 附近集中，随时间表现出周期性收缩和扩展。
+2. **波包宽度周期性变化**
+
+   从 $w(t) = \langle x^2 \rangle$ 的演化可以看出，波包的大小随着时间周期性增大和减小，这表明它在做振荡。
+
+   这种行为的主要原因是：
+
+   势能项 使波包趋向 $x=0$ 运动（就像一个谐振子）。
+
+   非线性项 代表了粒子之间的相互作用，当密度高时会提供额外的“压缩”效应，而密度低时则减弱。
+
+   这两个效应相互作用，导致波包周期性地被压缩和扩展。
+3. **系统的稳定性**
+
+   系统类似于一个有压缩机制的简谐振子，没有能量损失项，因此系统振幅稳定
+
+   
 
 ## 5. TSSP方法的优势
 你体会到TSSP方法有什么优势？（0.5分）
+1. **精度高**
+   传统的高阶求导的方法例如$$\frac{\partial^2}{{\partial x}^2}f = \frac{f(x+h)-2f(x)+f(x-h)}{{\Delta x}^2}$$
+   在$\Delta x$较小的时候精度非常差，TSSP方法可以通过傅里叶变换处理动能项避免这样求高阶导数，精度高
+2. **计算复杂度低**
+
+   TSSP 主要依赖快速傅里叶变换（FFT），其复杂度为 $O(N\log N)$，比传统有限差分法 $O(N^2)$ 更高效
+3. **适用于非线性系统**
+   TSSP 可以高效处理 GP 方程的非线性项（如 $|\psi|^2$），适用于玻色-爱因斯坦凝聚（GP问题）、非线性光学等问题。
 
 # B.堆上的最短路径
 定义这样一个总共$N$层$(N\in\mathbb{N})$的堆和其上的“最短路径”如图：
@@ -263,3 +300,221 @@ $log(w) = 0.6928log(N)-0.9808$
 $$ w(N) = 10^{-0.9808} \cdot N^{0.6928}$$ 即：$$  w(N) \propto N^{0.6928} $$
 
 ## 4. 解释规律
+这个系统类似于高尔顿板，即只有左子<右子的时候才会向左走（当然，这个也取决于后续节点的大小）
+对比高尔顿板：
+符合二项分布：
+对于一个参数为$p$的二项分布，它的标准差为：
+
+$$\sigma=\sqrt{n\cdot p\cdot(1-p)}$$
+
+其中：
+
+$n$是总试验次数(即步数或层数)。
+
+$p$是每一步 "成功" 的概率 (通常指向左或向右的概率)。
+
+$\$1-p\$$是每一步“失败”的概率。
+
+假设高尔顿板中小球左右移动概率相等($p=0.5$),有：
+
+$$\sigma=\sqrt{n\cdot0.5\cdot0.5}\:=\:\sqrt{\frac{n}{4}}=\frac{\sqrt{n}}{2}.$$
+
+**标准差随着 n 的增长：**
+- 标准差 σ 和 n 的平方根成正比：σ ∝ √n。
+这说明随着层数 n 增加，中性随机分布的离散程度（波动范围）会以次线性速率增加。
+
+换句话说，最短路径的位置随着层数增加会逐渐偏离，但这种偏离的平均幅度增速变缓。
+
+**两个问题的比较：**
+- 高尔顿板和二项分布假设每一步是完全随机的，而堆问题中路径的选择不是完全随机的，而是基于最短路径的选择规则（受后边的节点的大小的影响，目标还是总的路径最短，而非直接简单的左子节点和右子节点的比较）。因此结果显示出幂律指数 0.6928，略大于二项分布的指数 0.5。
+- 相比于高尔顿板，堆问题的系数大于0.5,因为随机路径的分布更加向边界扩散,路径的选择遵循最短路径规则，即每一步都会倾向于选择权重更小的路径。这种选择规则会打破完全独立的随机性，导致分布出现偏移和幂律特性。。
+
+# 附录
+## A
+``` python
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+
+def v(x:np.ndarray,phi:np.ndarray)->np.ndarray:
+    """
+    势能函数
+    输入：x: 离散的位置坐标
+    输出：势能值
+    """
+    # $$\psi(x_j,t+\Delta t/2)=\psi(x_j,t)\cdot\exp\left(i\frac{\Delta t}{2}\left(\frac{x^2}{2}-\frac{1}{2}|\psi(x_j,t)|^2\right)\right).$$
+    return 0.5 * x**2 
+
+def phi_origin(x:np.ndarray)->np.ndarray:
+    """
+    初始波函数
+    输入：x: 离散的位置坐标
+    输出：初始波函数值
+    """
+    # $$\psi(x_j,0)=\frac{1}{\sqrt{2\pi}}\exp(-x_j^2/2)\cdot\exp(i\cdot 0.5 \cdot x_j^2).$$     
+    return (1 / np.sqrt(2 * np.pi)) * np.exp(-x**2 / 2)
+
+def calculate_phi_and_density(x:np.ndarray,t0:float,tf:float,dt:float,phi_0:np.ndarray,V)->tuple[np.ndarray,np.ndarray,np.ndarray]:
+    """
+    输入：
+        x: 离散的位置坐标
+        t0: 初始时间
+        tf: 结束时间
+        dt: 时间步长
+        phi_0: 初始波函数
+        V: 势能函数
+    输出：
+        phi: 波函数随时间演化的结果，是二维数组，
+              第一维是时间步数，第二维是空间坐标点数
+        t: 时间数组
+    """
+    
+    dx = x[1] - x[0]  
+    t = np.arange(t0, tf, dt)
+    num_t = len(t)
+    phi = np.zeros((num_t, len(x)), dtype=complex)
+    density = np.zeros((num_t, len(x)), dtype=float)
+    current_phi = phi_0
+    k = 2*np.pi*np.fft.fftfreq(len(x), dx)  # 频率空间的波数
+    for i in range(num_t):
+        current_phi =current_phi*np.exp(-1j*dt*V(x,current_phi)/2)
+        k_phi = np.fft.fft(current_phi)  # 傅里叶变换
+        k_phi = k_phi*np.exp(-1j*dt*k**2/2)
+        current_phi = np.fft.ifft(k_phi)
+        current_phi = current_phi*np.exp(-1j*dt*V(x,current_phi)/2)
+        phi[i,:] = current_phi
+        density[i,:] = np.abs(current_phi)**2
+    return phi, density, t
+
+def plot_density(density:np.ndarray,t:np.ndarray,x:np.ndarray)->None:
+    """
+    输入：
+        density: 波函数的密度随时间演化的结果，是二维数组，
+                  第一维是时间步数，第二维是空间坐标点数
+        t: 时间数组
+        x: 离散的位置坐标
+    输出：
+        无返回值，直接绘制图形，画热图，横轴是时间，纵轴是空间坐标点数
+        颜色表示密度值
+    """
+    fig, ax = plt.subplots(figsize=(10, 6))
+    c = ax.pcolormesh(t, x, density.T, shading='auto', cmap='viridis')
+    fig.colorbar(c, ax=ax)
+    ax.set_title("Density Evolution Over Time",fontsize=20) 
+    ax.set_xlabel("Time",fontsize=20)
+    ax.set_ylabel("Position",fontsize=20)
+    
+    path = f"./figure/density_evolution_with_x_from_{x[0]}_to_{x[-1]}_myself.png"
+    plt.savefig(path, dpi=300, bbox_inches='tight')
+    plt.show()
+
+def calculate_w(density:np.ndarray,x:np.ndarray,t:np.ndarray)->np.ndarray:
+    """
+    计算波包宽度w(t)
+    """
+    dx= x[1]-x[0]
+    num_t = len(t) 
+    w = np.zeros(num_t,dtype=float)  
+    for i in range(num_t):
+        w[i] = np.sum(x**2 * density[i, :]* dx) 
+    return w
+
+def plot_w(w:np.ndarray,t:np.ndarray)->None:
+    """
+    输入：
+        w: 波包宽度随时间演化的结果，是一维数组
+        t: 时间数组
+    """
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.plot(t, w, label=r"$w(t)$")
+    ax.set_title(r"Wave Packet Width Evolution",fontsize=20)
+    ax.set_xlabel("Time",fontsize=20)
+    ax.set_ylabel(r"$w(t)$",fontsize=20)
+    path = f"./figure/w_vs_t.png"
+    plt.savefig(path, dpi=300, bbox_inches='tight')
+    plt.show()
+
+if __name__ == "__main__":
+    t0 = 0
+    tf = 20
+    dt = 0.01
+    N = 1000
+    x = np.linspace(-5, 5, N)
+    phi_0 = phi_origin(x)
+    phi_for_times,density_for_times,t = calculate_phi_and_density(x, t0, tf, dt, phi_0, v)
+    plot_density(density_for_times,t,x)
+    w = calculate_w(density_for_times,x,t)
+    plot_w(w,t)
+
+```
+
+## B
+``` python
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+import matplotlib.patches as patches
+
+# 生成堆
+def build_heap(N: int, seed: int = None) -> np.ndarray:
+    """
+    输出：heap: 以一维数组形式存储的完整堆
+    参数：
+        N: 堆的层数
+        seed: 随机数种子，默认为 None
+    """
+    if seed is not None:
+        np.random.seed(seed)  # 设置随机数种子
+    length = N * (N + 1) // 2  
+    heap = np.random.rand(length)  
+    return heap
+
+# 找到最短路径
+def find_shortest_path(heap: np.ndarray, N: int):
+    """
+    输出：
+        shortest_path: 最短路径长度
+        x_star: 最短路径的终点横坐标
+    """
+    length = N * (N + 1) // 2 
+    min_path = np.zeros(length, dtype=float)  
+    identical_path_total = []
+    for i in range(length):
+        identical_path_total.append([i])
+
+    start_index = N * (N - 1) // 2  
+    min_path[start_index:] = heap[start_index:]
+
+    for i in range(start_index - 1, -1, -1): 
+
+        n = [n for n in range(1, N + 1) if n * (n - 1) // 2 <= i < n * (n + 1) // 2]
+        n_int = n[0] if n else 0  # 确定当前节点所在层数
+
+        left_child = i + n_int
+        right_child = i + n_int + 1
+
+        if min_path[left_child] <= min_path[right_child]:
+            min_path[i] = heap[i] + min_path[left_child]
+            identical_path_total[i].extend(identical_path_total[left_child])
+        else:
+            min_path[i] = heap[i] + min_path[right_child]
+            identical_path_total[i].extend(identical_path_total[right_child])
+
+    shortest_path = min_path[0]  
+    important_nodes = identical_path_total[0]
+    x_star = important_nodes[-1]
+    return shortest_path, x_star,important_nodes
+
+if __name__ == "__main__":
+    # 示例运行
+    N = 5
+    heap = build_heap(N, seed=42)
+    shortest_path, x_star,important_nodes= find_shortest_path(heap, N)
+    
+    print("随机生成堆：\n", heap)
+    print("堆的层数: ", N)
+    print(f"最短路径长度 (p*): {shortest_path}")
+    print(f"最短路径节点索引: {important_nodes}")
+    print(f"最短路径终点横坐标 (x*): {x_star}")
+    
+```

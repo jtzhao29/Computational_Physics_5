@@ -9,7 +9,7 @@ def v(x:np.ndarray,phi:np.ndarray)->np.ndarray:
     输出：势能值
     """
     # $$\psi(x_j,t+\Delta t/2)=\psi(x_j,t)\cdot\exp\left(i\frac{\Delta t}{2}\left(\frac{x^2}{2}-\frac{1}{2}|\psi(x_j,t)|^2\right)\right).$$
-    return 0.5 * x**2 + 0.5 * np.abs(phi)**2
+    return 0.5 * x**2 
 
 def phi_origin(x:np.ndarray)->np.ndarray:
     """
