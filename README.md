@@ -1,4 +1,114 @@
 # A.TSSP方法&GP方程
+
+使用时间分裂谱方法(time-splitting spectral, TSSP) 求解一维的含时Gross-Pitaevskii方程
+
+$$i\frac{\partial}{\partial t}\psi(x,t) = -\frac{1}{2}\frac{\partial^2}{\partial x^2}\psi(x,t) + V(x)\psi(x,t) + \eta(\psi)\psi(x,t).$$
+
+其中，势能项取谐振子势 $V(x)=\frac{1}{2}x^2$, 非线性项 $\eta(\psi)=\frac{1}{2}|\psi|^2$. 波函数初始条件为
+
+$$|\psi(x,0)|=\frac{1}{\sqrt{2\pi}}e^{-x^2/2}.$$
+
+## 1. 写出TSSP方法的基本原理
+包括如何分解哈密顿量以及怎么处理动能项和势能项。为了方便求解，你需要怎样的边界条件？对一维问题，TSSP方法的计算复杂度是多少？（1.5分）
+
+1. **分解哈密顿量：**
+$$H = -\frac{1}{2}\frac{\partial^2}{{\partial x}^2}+\frac 12x^2+\frac12|\psi|^2$$
+
+
+$$H=T+V$$
+
+其中：
+
+动能项$( T) :$ $T= - \frac 12\frac {\partial ^2}{\partial x^2}$
+势能项$( V) :$ $V( x) = \frac 12x^2+\frac12|\psi|^2$
+那么在每一个时间步上可以这样分解：
+$$e^{-iH\Delta t}\approx e^{-iT\Delta t/2}e^{-i(V+N)\Delta t}e^{-iT\Delta t/2}.$$
+2. **处理动能项**
+$$\mathrm{i}\psi_t=-\frac{1}{2}\psi_{xx},$$
+- 利用 FFT 将$\psi(x,t)$转换到傅里叶空间$\hat{\psi}(k,t):$
+$$i\hat{\psi}_t(k,t)=\frac{1}{2}k^2\hat{\psi}(k,t).$$
+
+- 在傅里叶空间中进行如下演化($k$为波数):
+
+$$\hat{\psi}(k,t+\Delta t)=\hat{\psi}(k,t)\cdot\exp\Bigg(-i\frac{k^2\Delta t}{2}\Bigg).$$
+
+<!-- - 通过逆傅里叶变换 (IFFT) 回到物理空间：
+$$\psi(x,t+\Delta t)=\mathrm{IFFT}[\hat{\psi}(k,t+\Delta t/2)].$$ -->
+
+3. **处理势能项**
+$$i\frac{\partial}{\partial t}\psi(x,t) = \frac{1}{2}x^2\psi(x,t) + \frac12|\psi|^2\psi(x,t).$$
+则有
+$$\psi(x_j,t+\Delta t/2)=\psi(x_j,t)\cdot\exp\left(i\frac{\Delta t}{2}\left(-\frac{x^2}{2}-\frac{1}{2}|\psi(x_j,t)|^2\right)\right).$$
+4. **时间演化：**
+- 在实空间中演化半步势能项$e^{-iH_V\Delta t/2}$，演化方式见上面分析
+
+- 在傅里叶空间中演化一步动能项$e^{-iH_T\Delta t}$，演化方式见上面分析
+
+- 再次在实空间中演化半步势能项$e^{-iH_V\Delta t/2}$，演化方式见上面分析
+
+5. **方便求解的边界条件：**
+由于动能项需要使用傅里叶变换，边界条件通常取周期边界条件，使
+得波函数的值在两端点处连续：
+
+$$\psi(x_{\min},t)=\psi(x_{\max},t).$$
+
+6. **计算复杂度**
+计算复杂度主要来自于傅里叶变换，势能项演化的时间复杂度为$O(N)$,相比之下一次快速傅里叶变换的复杂度为$O(Nlog(N))$
+因而计算复杂度为$$O(2Nlog(N))=O(Nlog(N))$$
+
+**代码呈现：**
+```python
+def calculate_phi_and_density(x:np.ndarray,t0:float,tf:float,dt:float,phi_0:np.ndarray,V)->tuple[np.ndarray,np.ndarray,np.ndarray]:
+    """
+    输入：
+        x: 离散的位置坐标
+        t0: 初始时间
+        tf: 结束时间
+        dt: 时间步长
+        phi_0: 初始波函数
+        V: 势能函数
+    输出：
+        phi: 波函数随时间演化的结果，是二维数组，
+              第一维是时间步数，第二维是空间坐标点数
+        t: 时间数组
+    """
+    
+    dx = x[1] - x[0]  
+    t = np.arange(t0, tf, dt)
+    num_t = len(t)
+    phi = np.zeros((num_t, len(x)), dtype=complex)
+    density = np.zeros((num_t, len(x)), dtype=float)
+    current_phi = phi_0
+    k = 2*np.pi*np.fft.fftfreq(len(x), dx)  # 频率空间的波数
+    for i in range(num_t):
+        current_phi =current_phi*np.exp(-1j*dt*V(x,current_phi)/2)
+        k_phi = np.fft.fft(current_phi)  # 傅里叶变换
+        k_phi = k_phi*np.exp(-1j*dt*k**2/2)
+        current_phi = np.fft.ifft(k_phi)
+        current_phi = current_phi*np.exp(-1j*dt*V(x,current_phi)/2)
+        phi[i,:] = current_phi
+        density[i,:] = np.abs(current_phi)**2
+    return phi, density, t
+```
+
+## 2. 画出$\rho$的热力图
+选取时间范围 $t \in [0,20]$, 求解密度函数 $\rho(x,t) \equiv |\psi(x,t)|^2$ 随着时间的演化情况。画出$\rho$的热力图（横轴为$t$，纵轴为$x$）。你发现了什么？（1分）
+
+画出$\rho$的热力图如下：
+![alt text](figure/density_evolution_with_x_from_-3.0_to_2.98828125.png)
+
+## 3. 波包宽度的演化情况
+画出同样时间内，波包宽度的演化情况。波包宽度定义为 $w(t) \equiv (x^2)(t)$。你发现了什么？（1分）
+![alt text](figure/wave_packet_width_evolution_2252.png)
+
+
+
+## 4. 定性解释
+结合GP方程的物理意义，定性解释上述现象。（1分）
+
+## 5. TSSP方法的优势
+你体会到TSSP方法有什么优势？（0.5分）
+
 # B.堆上的最短路径
 定义这样一个总共$N$层$(N\in\mathbb{N})$的堆和其上的“最短路径”如图：
 (a).第$n$层拥有$n+1$个节点$v_i^n.$
@@ -12,7 +122,8 @@
 1. 对于$N$层的堆，其节点总数为$\frac{N(N+1)}{2}$，需要建立一个长度为 $\frac{N(N+1)}{2}$ 的数组
 2. 为了保证每个节点$v_i^n$指向$n+1$层的两个子节点$v_i^{n+1},v_{i+1}^{n+1}.$，可以发现，如果第$n$层的某个节点的编号是$a$，则其只想的$n+1$层的两个节点的编号分别为$a+n$和$a+n+1$。这样就确定了各个节点的连接关系
 3. 使每个点$v_i^n$上的取值是一个[0,1)上均匀分布的随机数
-这样就完成了一个堆的构建
+
+这样就完成了一个堆的构建，具体代码见附录。
 
 ## 2. 找到最短路径p*和终点横坐标x*.呈现代码并阐述使用的算法及其复杂度
 ### 呈现代码

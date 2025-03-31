@@ -4,10 +4,15 @@ import matplotlib.animation as animation
 import matplotlib.patches as patches
 
 # 生成堆
-def build_heap(N: int) -> np.ndarray:
+def build_heap(N: int, seed: int = None) -> np.ndarray:
     """
     输出：heap: 以一维数组形式存储的完整堆
+    参数：
+        N: 堆的层数
+        seed: 随机数种子，默认为 None
     """
+    if seed is not None:
+        np.random.seed(seed)  # 设置随机数种子
     length = N * (N + 1) // 2  
     heap = np.random.rand(length)  
     return heap
@@ -51,9 +56,9 @@ def find_shortest_path(heap: np.ndarray, N: int):
 if __name__ == "__main__":
     # 示例运行
     N = 5
-    heap = build_heap(N)
+    heap = build_heap(N, seed=42)
     shortest_path, x_star,important_nodes= find_shortest_path(heap, N)
-
+    
     print("随机生成堆：\n", heap)
     print("堆的层数: ", N)
     print(f"最短路径长度 (p*): {shortest_path}")

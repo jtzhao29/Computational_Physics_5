@@ -94,6 +94,6 @@ def plot_w_vs_N_and_log_fit(N_values: np.ndarray, num: int):
     plt.show()
 
 if __name__ == "__main__":
-    N_values = np.arange(3, 41)  
+    N_values = np.arange(3, 201)  
     num = 10000
     plot_w_vs_N_and_log_fit(N_values, num)
